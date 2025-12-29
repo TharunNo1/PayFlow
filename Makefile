@@ -33,10 +33,7 @@ test:
 ## demo: Run a curl script to simulate a transfer and then audit
 demo:
 	@echo "Creating transfer..."
-	curl -X POST http://localhost:8080/transfer \
-		-H "Content-Type: application/json" \
-		-H "X-Idempotency-Key: $$(date +%s)" \
-		-d '{"FromAccountID": "00000000-0000-0000-0000-000000000001", "ToAccountID": "00000000-0000-0000-0000-000000000002", "Amount": 5000}'
+	
 	@echo "\nRunning audit..."
 	@make audit
 
@@ -46,4 +43,7 @@ docker-down:
 
 ## clean: Remove binaries
 clean:
-	rm -rf bin/
+	rm -rf bin/curl -X POST http://localhost:8080/transfer \
+		-H "Content-Type: application/json" \
+		-H "X-Idempotency-Key: $$(date +%s)" \
+		-d '{"FromAccountID": "00000000-0000-0000-0000-000000000001", "ToAccountID": "00000000-0000-0000-0000-000000000002", "Amount": 5000}'

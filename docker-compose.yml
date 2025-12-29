@@ -2,6 +2,8 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password

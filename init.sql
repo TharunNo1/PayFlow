@@ -21,3 +21,8 @@ CREATE TABLE payout_tasks (
     last_error TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+INSERT INTO accounts (id, owner_name, balance) VALUES 
+('00000000-0000-0000-0000-000000000001', 'Company Payroll', 1000000),
+('00000000-0000-0000-0000-000000000002', 'Employee One', 0)
+ON CONFLICT (id) DO NOTHING;
