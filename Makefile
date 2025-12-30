@@ -32,20 +32,13 @@ test:
 
 # Run all tests with the race detector
 race-test:
-	@echo "Running all tests..."
-	go test -v -race ./...
+	@echo "Running all tests with race detector..."
+	CGO_ENABLED=1 go test -v -race ./...
 
 # Run tests and show coverage report
 cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
-
-## demo: Run a curl script to simulate a transfer and then audit
-demo:
-	@echo "Creating transfer..."
-	
-	@echo "\nRunning audit..."
-	@make audit
 
 ## docker-down: Stop all services
 docker-down:
