@@ -3,7 +3,7 @@ BINARY_NAME=payflow
 DB_URL=postgres://user:password@localhost:5432/payflow?sslmode=disable
 REDIS_URL=localhost:6379
 
-.PHONY: all build run docker-up docker-down test race-test cover audit clean demo
+.PHONY: all build run docker-up docker-down test race-test cover audit clean
 
 all: build
 
@@ -51,7 +51,4 @@ test-clean:
 
 ## clean: Remove binaries
 clean:
-	rm -rf bin/curl -X POST http://localhost:8080/transfer \
-		-H "Content-Type: application/json" \
-		-H "X-Idempotency-Key: $$(date +%s)" \
-		-d '{"FromAccountID": "00000000-0000-0000-0000-000000000001", "ToAccountID": "00000000-0000-0000-0000-000000000002", "Amount": 5000}'
+	rm -rf bin/
