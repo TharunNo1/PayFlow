@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -13,11 +13,54 @@ import (
 
 	"github.com/TharunNo1/payflow/internal/config"
 	"github.com/TharunNo1/payflow/internal/ledger"
+	"github.com/TharunNo1/payflow/internal/utils"
 	"github.com/TharunNo1/payflow/pkg/idempotency"
 	"github.com/gin-gonic/gin"     // web framework
 	_ "github.com/lib/pq"          // Postgres driver
 	"github.com/redis/go-redis/v9" // Redis client
 )
+
+func SetupRouter(repo *ledger.Repository, rdb *redis.Client) *gin.Engine {
+
+	// Gin Router with Logger and Recovery Middleware
+	r := gin.Default()
+
+	// Routes
+	r.GET("/health", func(c *gin.Context) {
+		sum, err := repo.GlobalAudit(c.Request.Context())
+		if err != nil {
+			c.JSON(500, utils.Error(err.Error(), "Ledger integrity check failed"))
+			return
+		}
+		c.JSON(200, utils.Success(
+			gin.H{
+				"system":               "healthy",
+				"ledger_integrity_sum": sum,
+			},
+			"System is Healthy"),
+		)
+	})
+
+	// We pass idempotency.Middleware(rdb) as an argument BEFORE the handler function
+	r.POST("/transfer", idempotency.Middleware(rdb), func(c *gin.Context) {
+		var req ledger.TransferParams
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, utils.Error(err.Error(), "invalid request body"))
+			return
+		}
+		if err := repo.ExecuteTransfer(c.Request.Context(), req); err != nil {
+			c.JSON(500, utils.Error(err.Error(), ""))
+			return
+		}
+		c.JSON(200, utils.Success(
+			gin.H{
+				"message": "transfer successful",
+			}, ""),
+		)
+	})
+
+	return r
+}
 
 func main() {
 
@@ -50,42 +93,8 @@ func main() {
 	// Initialize ledger Repository with DB connection
 	repo := ledger.NewRepository(db)
 
-	// Gin Router with Logger and Recovery Middleware
-	r := gin.Default()
-
-	// Routes
-	r.GET("/health", func(c *gin.Context) {
-		sum, err := repo.GlobalAudit(c.Request.Context())
-		if err != nil {
-			c.JSON(500, gin.H{
-				"status": "unhealthy",
-				"error":  err.Error(),
-			})
-			return
-		}
-		c.JSON(200, gin.H{
-			"status":               "healthy",
-			"ledger_integrity_sum": sum})
-	})
-
-	// We pass idempotency.Middleware(rdb) as an argument BEFORE the handler function
-	r.POST("/transfer", idempotency.Middleware(rdb), func(c *gin.Context) {
-		var req ledger.TransferParams
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{
-				"error": "invalid request body",
-			})
-			return
-		}
-		if err := repo.ExecuteTransfer(c.Request.Context(), req); err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{
-			"message": "transfer successful",
-		})
-	})
-
+	// Get Router
+	r := SetupRouter(repo, rdb)
 	// 4. Configure HTTP Server
 	srv := &http.Server{
 		Addr:    ":8080",

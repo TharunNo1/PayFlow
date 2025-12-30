@@ -11,7 +11,7 @@ func Load() *Config {
 	return &Config{
 		// Provide defaults if the environment variable is missing
 		RedisAddr: getEnv("REDIS_ADDR", "localhost:6379"),
-		DBURL:     getEnv("DATABASE_URL", "postgres://user:pass@localhost:5432/db"),
+		DBURL:     getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/payflow?sslmode=disable"),
 	}
 }
 
