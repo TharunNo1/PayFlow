@@ -11,68 +11,79 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/TharunNo1/payflow/internal/config"
 	"github.com/TharunNo1/payflow/internal/ledger"
-	"github.com/TharunNo1/payflow/pkg/idempotency" // Ensure this path is correct
-	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
-	"github.com/redis/go-redis/v9" // New Redis import
+	"github.com/TharunNo1/payflow/pkg/idempotency"
+	"github.com/gin-gonic/gin"     // web framework
+	_ "github.com/lib/pq"          // Postgres driver
+	"github.com/redis/go-redis/v9" // Redis client
 )
 
 func main() {
-	// 1. Database Connection
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://user:password@localhost:5432/payflow?sslmode=disable"
-	}
 
-	db, err := sql.Open("postgres", dbURL)
+	// 1. Get Configurations and Environment variables
+	cfg := config.Load()
+
+	// 2. Database Connection
+	db, err := sql.Open("postgres", cfg.DBURL)
+	// Test DB connectivity
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
+	} else {
+		log.Println("✅ Connected to Postgres")
 	}
 	defer db.Close()
 
-	// 2. Redis Connection (New Section)
-	redisAddr := os.Getenv("REDIS_URL")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
+	// 2. Redis Connection
+	redisAddr := cfg.RedisAddr
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
-
-	// Quick check to ensure Redis is alive before starting
+	// Test Redis connectivity
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	log.Println("✅ Connected to Redis")
 
 	// 3. Initialize Repository & Router
+
+	// Initialize ledger Repository with DB connection
 	repo := ledger.NewRepository(db)
+
+	// Gin Router with Logger and Recovery Middleware
 	r := gin.Default()
 
 	// Routes
 	r.GET("/health", func(c *gin.Context) {
 		sum, err := repo.GlobalAudit(c.Request.Context())
 		if err != nil {
-			c.JSON(500, gin.H{"status": "unhealthy", "error": err.Error()})
+			c.JSON(500, gin.H{
+				"status": "unhealthy",
+				"error":  err.Error(),
+			})
 			return
 		}
-		c.JSON(200, gin.H{"status": "healthy", "ledger_integrity_sum": sum})
+		c.JSON(200, gin.H{
+			"status":               "healthy",
+			"ledger_integrity_sum": sum})
 	})
 
 	// We pass idempotency.Middleware(rdb) as an argument BEFORE the handler function
 	r.POST("/transfer", idempotency.Middleware(rdb), func(c *gin.Context) {
 		var req ledger.TransferParams
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": "invalid request body"})
+			c.JSON(400, gin.H{
+				"error": "invalid request body",
+			})
 			return
 		}
 		if err := repo.ExecuteTransfer(c.Request.Context(), req); err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"message": "transfer successful"})
+		c.JSON(200, gin.H{
+			"message": "transfer successful",
+		})
 	})
 
 	// 4. Configure HTTP Server
