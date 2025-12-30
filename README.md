@@ -1,6 +1,6 @@
-# PayFlow | High-Performance Fintech Ledger System
+# PayFlow | Fintech Ledger System
 
-PayFlow is an industry-grade backend engine designed to handle financial transactions with the same rigor as modern banking systems. Built with **Go**, **Postgres**, and **Redis**, it solves the "Double-Spend" and "Data Loss" problems using distributed systems patterns.
+PayFlow is an industry-grade mock backend engine designed to handle financial transactions with the same rigor as modern banking systems. Built with **Go**, **Postgres**, and **Redis**, it solves the "Double-Spend" and "Data Loss" problems using distributed systems patterns.
 
 ## 🏗 Architectural Pillars
 
